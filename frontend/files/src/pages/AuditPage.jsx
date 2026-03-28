@@ -1,8 +1,6 @@
 // src/pages/AuditPage.jsx
 // ─────────────────────────────────────────────────────────────────────────────
-// Tries to fetch real audit logs from GET /api/audit/logs.
-// If the endpoint isn't available, falls back to the in-memory logs
-// that App.jsx maintains from chat interactions.
+// Audit Logs Page - Category column removed
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { useState, useEffect } from "react";
@@ -22,13 +20,11 @@ export default function AuditPage({ logs: localLogs }) {
   useEffect(() => {
     getAuditLogs()
       .then(data => {
-        // Backend returns { logs: [...] } OR just an array
         const rows = Array.isArray(data) ? data : (data.logs || []);
         setAllLogs(rows);
         setSource("backend");
       })
       .catch(() => {
-        // Backend endpoint not available — use in-memory logs from chats
         setAllLogs(localLogs);
         setSource("local");
       })
@@ -45,12 +41,18 @@ export default function AuditPage({ logs: localLogs }) {
       (log.username || "").toLowerCase().includes(filters.user.toLowerCase()) ||
       (log.name     || "").toLowerCase().includes(filters.user.toLowerCase()) ||
       (log.user_email || "").toLowerCase().includes(filters.user.toLowerCase());
-    const roleMatch     = !filters.role     || log.role === filters.role || log.role_name === filters.role;
-    const decisionMatch = !filters.decision || (log.decision || "").toLowerCase() === filters.decision.toLowerCase();
+
+    const roleMatch     = !filters.role     || 
+      (log.role || "").toLowerCase() === filters.role.toLowerCase() || 
+      (log.role_name || "").toLowerCase() === filters.role.toLowerCase();
+
+    const decisionMatch = !filters.decision || 
+      (log.decision || "").toLowerCase() === filters.decision.toLowerCase();
+
     return nameMatch && roleMatch && decisionMatch;
   });
 
-  // Normalise a log row — backend and local shapes differ slightly
+  // Normalise a log row
   function normLog(log) {
     return {
       id:        log.id,
@@ -59,7 +61,6 @@ export default function AuditPage({ logs: localLogs }) {
       username:  log.username  || log.user_email || "",
       role:      log.role      || log.role_name  || "—",
       query:     log.query     || log.query_text || "—",
-      category:  log.category  || log.resource_tags || "—",
       decision:  log.decision  || "—",
       action:    log.action    || log.deny_reason || "—",
     };
@@ -109,20 +110,27 @@ export default function AuditPage({ logs: localLogs }) {
               <table className="log-table">
                 <thead>
                   <tr>
-                    <th>Timestamp</th><th>User</th><th>Role</th>
-                    <th>Query</th><th>Category</th><th>Decision</th><th>Action</th>
+                    <th>Timestamp</th>
+                    <th>User</th>
+                    <th>Role</th>
+                    <th>Query</th>
+                    <th>Decision</th>
+                    <th>Action</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filtered.length === 0 ? (
                     <tr>
-                      <td colSpan={7} style={{ textAlign: "center", color: "var(--charcoal3)", padding: 40 }}>
-                        {allLogs.length === 0 ? "No logs yet — queries will appear here after you use the chat." : "No matching log entries"}
+                      <td colSpan={6} style={{ textAlign: "center", color: "var(--charcoal3)", padding: 40 }}>
+                        {allLogs.length === 0 
+                          ? "No logs yet — queries will appear here after you use the chat." 
+                          : "No matching log entries"}
                       </td>
                     </tr>
                   ) : filtered.map((raw, i) => {
                     const log = normLog(raw);
                     const dec = (log.decision || "").toLowerCase();
+
                     return (
                       <tr key={log.id || i}>
                         <td style={{ color: "var(--charcoal3)", whiteSpace: "nowrap", fontSize: 12 }}>
@@ -132,19 +140,23 @@ export default function AuditPage({ logs: localLogs }) {
                           <div style={{ fontWeight: 600, fontSize: 13 }}>{log.name}</div>
                           <div style={{ fontSize: 11, color: "var(--charcoal3)" }}>{log.username}</div>
                         </td>
-                        <td><span className={`badge ${getRoleBadgeClass(log.role)}`}>{log.role}</span></td>
-                        <td style={{ maxWidth: 220 }}>
-                          <div style={{ fontSize: 13, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={log.query}>
+                        <td>
+                          <span className={`badge ${getRoleBadgeClass(log.role)}`}>{log.role}</span>
+                        </td>
+                        <td style={{ maxWidth: 320 }}>
+                          <div style={{ fontSize: 13, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} 
+                               title={log.query}>
                             {log.query}
                           </div>
                         </td>
-                        <td style={{ fontSize: 12, color: "var(--charcoal3)" }}>{log.category}</td>
                         <td>
                           <span className={`badge badge-${dec.includes("allow") ? "allowed" : dec.includes("deny") ? "denied" : "partial"}`}>
                             {log.decision}
                           </span>
                         </td>
-                        <td style={{ fontSize: 12, color: "var(--charcoal3)", maxWidth: 160 }}>{log.action}</td>
+                        <td style={{ fontSize: 12, color: "var(--charcoal3)", maxWidth: 180 }}>
+                          {log.action}
+                        </td>
                       </tr>
                     );
                   })}
