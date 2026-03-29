@@ -74,7 +74,7 @@ export default function App() {
   const highAlerts = alerts.filter(a => a.severity === "high").length;
 
   // Admin check (supports both "executive" and "Admin" from backend)
-const isAdmin = ["executive", "Executive", "admin", "Admin"].includes(user.role);
+  const isAdmin = ["executive", "Executive", "Admin", "admin"].includes(user.role);
 
   return (
     <div className="app-layout">
